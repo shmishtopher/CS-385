@@ -83,3 +83,27 @@ module TwoOneMux(
   or(result, lhs, rhs);
 
 endmodule // TwoOneMux
+
+
+/**
+ * The FourOneMux cascades several TwoOneMuxs together to
+ * create a mux which selects between four inputs.
+ *
+ * @param {wire [1:0]} select - Selects the input to be forwarded
+ * @param {wire [3:0]} data - The inputs to select from
+ * @return {wire} result - The selected input
+ */
+module FourOneMux(
+  input wire [1:0] select,
+  input wire [3:0] data,
+  output wire result
+);
+
+  // Instantiate layer one
+  TwoOneMux muxA(select[0], {data[0], data[1]}, AB);
+  TwoOneMux muxB(select[0], {data[2], data[3]}, BC);
+
+  // Instantiate layer two
+  TwoOneMux muxC(select[1], {AB, BC}, result);
+
+endmodule // FourOneMux
