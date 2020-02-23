@@ -195,3 +195,67 @@ module OneBitALU_MSB(
   FourOneMux selector(op, {lhs_and_rhs, lhs_or_rhs, sum, less}, result);
 
 endmodule // OneBitALU_MSB
+
+
+/**
+ * The ALU is the heart of the CPU, it performs arithmetic,
+ * logical, and comparison operations.  This ALU supports
+ * add, sub, and, or, addi, and slt instructions.  This ALU
+ * is built by chaining together 15 OneBitALUs and 1
+ * OneBitALU_MSB.
+ *
+ * @param {wire [15:0]} lhs - The left hand side value
+ * @param {wire [15:0]} rhs - The right hand side value
+ * @param {wire [2:0]} op - The operation to perform
+ * @return {wire [15:0]} result - The result of the computation
+ * @return {wire} zero - Weather the result is zero or not
+ */
+module ALU(
+  input wire [15:0] lhs,
+  input wire [15:0] rhs,
+  input wire [2:0] op,
+  output wire [15:0] result,
+  output wire zero
+);
+
+  // Chain together 15 OneBitALUs
+  OneBitALU oneBitALU_a(lhs[0], rhs[0], op[2], set, op[2], op[1:0], result[0], cout_a);
+  OneBitALU oneBitALU_b(lhs[1], rhs[1], cout_a, 0, op[2], op[1:0], result[1], cout_b);
+  OneBitALU oneBitALU_c(lhs[2], rhs[2], cout_b, 0, op[2], op[1:0], result[2], cout_c);
+  OneBitALU oneBitALU_d(lhs[3], rhs[3], cout_c, 0, op[2], op[1:0], result[3], cout_d);
+  OneBitALU oneBitALU_e(lhs[4], rhs[4], cout_d, 0, op[2], op[1:0], result[4], cout_e);
+  OneBitALU oneBitALU_f(lhs[5], rhs[5], cout_e, 0, op[2], op[1:0], result[5], cout_f);
+  OneBitALU oneBitALU_g(lhs[6], rhs[6], cout_f, 0, op[2], op[1:0], result[6], cout_g);
+  OneBitALU oneBitALU_h(lhs[7], rhs[7], cout_g, 0, op[2], op[1:0], result[7], cout_h);
+  OneBitALU oneBitALU_i(lhs[8], rhs[8], cout_h, 0, op[2], op[1:0], result[8], cout_i);
+  OneBitALU oneBitALU_j(lhs[9], rhs[9], cout_i, 0, op[2], op[1:0], result[9], cout_j);
+  OneBitALU oneBitALU_k(lhs[10], rhs[10], cout_j, 0, op[2], op[1:0], result[10], cout_k);
+  OneBitALU oneBitALU_l(lhs[11], rhs[11], cout_k, 0, op[2], op[1:0], result[11], cout_l);
+  OneBitALU oneBitALU_m(lhs[12], rhs[12], cout_l, 0, op[2], op[1:0], result[12], cout_m);
+  OneBitALU oneBitALU_n(lhs[13], rhs[13], cout_m, 0, op[2], op[1:0], result[13], cout_n);
+  OneBitALU oneBitALU_o(lhs[14], rhs[14], cout_n, 0, op[2], op[1:0], result[14], cout_o);
+  
+  // Chain 1 OneBitALU_MSB
+  OneBitALU_MSB oneBitALU_MSB(lhs[15], rhs[15], cout_o, 0, op[2], op[1:0], result[15], set, cout_null);
+
+  // Compute zero
+  or(a_or_b, result[0], result[1]);
+  or(c_or_d, result[2], result[3]);
+  or(e_or_f, result[4], result[5]);
+  or(g_or_h, result[6], result[7]);
+  or(i_or_j, result[8], result[9]);
+  or(k_or_l, result[10], result[11]);
+  or(m_or_n, result[12], result[13]);
+  or(o_or_p, result[14], result[15]);
+
+  or(ab_or_cd, a_or_b, c_or_d);
+  or(ef_or_gh, e_or_f, g_or_h);
+  or(ij_or_kl, i_or_j, k_or_l);
+  or(mn_or_op, m_or_n, o_or_p);
+
+  or(abcd_or_efgh, ab_or_cd, ef_or_gh);
+  or(ijkl_or_mnop, ij_or_kl, mn_or_op);
+
+  nor(zero, abcd_or_efgh, ijkl_or_mnop);
+
+endmodule // ALU
