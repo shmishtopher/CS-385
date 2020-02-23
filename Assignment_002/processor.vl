@@ -6,7 +6,7 @@
 /**
  * The half adder performs addition of numbers.  It uses a
  * single XOR gate to compute the sum and a single and gate
- * to compute the carry
+ * to compute the carry.
  *
  * @param {wire} lhs - The left hand side
  * @param {wire} rhs - The right hand side
@@ -56,3 +56,30 @@ module Adder(
   or(cout, carry_left, carry_right);
 
 endmodule // Adder
+
+
+/**
+ * The TwoOneMux selects one out of two input lines to
+ * forward to the output line.
+ *
+ * @param {wire} select - Selects the input to forward
+ * @param {wire [1:0]} data - The inputs to select from
+ * @return {wire} result - The selected input
+ */
+module TwoOneMux(
+  input wire select,
+  input wire [1:0] data,
+  output wire result
+);
+
+  // Invert select line
+  not(select_, select);
+  
+  // Compute products
+  and(lhs, data[0], select_);
+  and(rhs, data[1], select);
+
+  // Compute sum
+  or(result, lhs, rhs);
+
+endmodule // TwoOneMux
