@@ -150,3 +150,48 @@ module OneBitALU(
   FourOneMux selector(op, {lhs_and_rhs, lhs_or_rhs, sum, less}, result);
 
 endmodule // OneBitALU
+
+
+/**
+ * The OneBitALU_MSB performs basic arithmetic and logical
+ * operations on the most significant bit.
+ *
+ * @param {wire} lhs - The left hand side of the computation
+ * @param {wire} rhs - The right hand side of the computation
+ * @param {wire} cin - The carry in from the computaion of previous bits
+ * @param {wire} less - The less input for the slt operation
+ * @param {wire} rhs_invert - Inverts the rhs (used for inverse operations)
+ * @param {wire [1:0]} op - The opcode representing the operation to perform
+ * @return {wire} result - The result of the computaion
+ * @return {wire} sum - The sum of the most significant bits of lhs and rhs
+ * @return {wire} cout - The carry out of the compuation (if applicable)
+ */
+module OneBitALU_MSB(
+  input wire lhs,
+  input wire rhs,
+  input wire cin,
+  input wire less,
+  input wire rhs_invert,
+  input wire [1:0] op,
+  output wire result,
+  output wire sum,
+  output wire cout
+);
+
+  // Handle rhs inversion
+  not(rhs_, rhs);
+  TwoOneMux inverter(rhs_invert, {rhs_, rhs}, rhs_inverted);
+
+  // Compute lhs & rhs
+  and(lhs_and_rhs, lhs, rhs);
+
+  // Compute lhs | rhs
+  or(lhs_or_rhs, lhs, rhs);
+
+  // Compute lhs + rhs
+  Adder adder(cin, lhs, rhs_inverted, sum, cout);
+
+  // Select operation based on opcode
+  FourOneMux selector(op, {lhs_and_rhs, lhs_or_rhs, sum, less}, result);
+
+endmodule // OneBitALU_MSB
