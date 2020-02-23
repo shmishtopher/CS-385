@@ -1,0 +1,58 @@
+// @author    Matthew Warren & Christopher Schmitt
+// @version   1.23.2020
+// @licence   MIT (c) @author
+
+
+/**
+ * The half adder performs addition of numbers.  It uses a
+ * single XOR gate to compute the sum and a single and gate
+ * to compute the carry
+ *
+ * @param {wire} lhs - The left hand side
+ * @param {wire} rhs - The right hand side
+ * @return {wire} sum - The sum of lhs + rhs
+ * @return {wire} cout - The carry of lhs + rhs
+ */
+module HalfAdder(
+  input wire lhs,
+  input wire rhs,
+  output wire sum,
+  output wire cout
+);
+
+  // Compute sum
+  xor(sum, lhs, rhs);
+
+  // Comput cout
+  and(cout, lhs, rhs);
+
+endmodule // HalfAdder
+
+
+/**
+ * The adder combines two half adders to produce a single
+ * circuit which accepts three inputs: carry in, lhs, and
+ * rhs.
+ *
+ * @param {wire} cin - The carry in
+ * @param {wire} lhs - The left hand side
+ * @param {wire} rhs - The right hand side
+ * @return {wire} sum - The sum of lhs + rhs
+ * @return {wire} cout - The sum of lhs + rhs
+ */
+module Adder(
+  input wire cin,
+  input wire lhs,
+  input wire rhs,
+  output wire sum,
+  output wire cout
+);
+
+  // Instantiate two half-adders
+  HalfAdder halfAdderA(cin, lhs, buffer, carry_left);
+  HalfAdder halfAdderB(buffer, rhs, sum, carry_right);
+
+  // Compute cout
+  or(cout, carry_left, carry_right);
+
+endmodule // Adder
