@@ -129,8 +129,8 @@ module OneBitALU(
   input wire less,
   input wire rhs_invert,
   input wire [1:0] op,
-  output wire result
-  output wire cout,
+  output wire result,
+  output wire cout
 );
 
   // Handle rhs inversion
@@ -220,23 +220,23 @@ module ALU(
 
   // Chain together 15 OneBitALUs
   OneBitALU oneBitALU_a(lhs[0], rhs[0], op[2], set, op[2], op[1:0], result[0], cout_a);
-  OneBitALU oneBitALU_b(lhs[1], rhs[1], cout_a, 0, op[2], op[1:0], result[1], cout_b);
-  OneBitALU oneBitALU_c(lhs[2], rhs[2], cout_b, 0, op[2], op[1:0], result[2], cout_c);
-  OneBitALU oneBitALU_d(lhs[3], rhs[3], cout_c, 0, op[2], op[1:0], result[3], cout_d);
-  OneBitALU oneBitALU_e(lhs[4], rhs[4], cout_d, 0, op[2], op[1:0], result[4], cout_e);
-  OneBitALU oneBitALU_f(lhs[5], rhs[5], cout_e, 0, op[2], op[1:0], result[5], cout_f);
-  OneBitALU oneBitALU_g(lhs[6], rhs[6], cout_f, 0, op[2], op[1:0], result[6], cout_g);
-  OneBitALU oneBitALU_h(lhs[7], rhs[7], cout_g, 0, op[2], op[1:0], result[7], cout_h);
-  OneBitALU oneBitALU_i(lhs[8], rhs[8], cout_h, 0, op[2], op[1:0], result[8], cout_i);
-  OneBitALU oneBitALU_j(lhs[9], rhs[9], cout_i, 0, op[2], op[1:0], result[9], cout_j);
-  OneBitALU oneBitALU_k(lhs[10], rhs[10], cout_j, 0, op[2], op[1:0], result[10], cout_k);
-  OneBitALU oneBitALU_l(lhs[11], rhs[11], cout_k, 0, op[2], op[1:0], result[11], cout_l);
-  OneBitALU oneBitALU_m(lhs[12], rhs[12], cout_l, 0, op[2], op[1:0], result[12], cout_m);
-  OneBitALU oneBitALU_n(lhs[13], rhs[13], cout_m, 0, op[2], op[1:0], result[13], cout_n);
-  OneBitALU oneBitALU_o(lhs[14], rhs[14], cout_n, 0, op[2], op[1:0], result[14], cout_o);
+  OneBitALU oneBitALU_b(lhs[1], rhs[1], cout_a, 1'b0, op[2], op[1:0], result[1], cout_b);
+  OneBitALU oneBitALU_c(lhs[2], rhs[2], cout_b, 1'b0, op[2], op[1:0], result[2], cout_c);
+  OneBitALU oneBitALU_d(lhs[3], rhs[3], cout_c, 1'b0, op[2], op[1:0], result[3], cout_d);
+  OneBitALU oneBitALU_e(lhs[4], rhs[4], cout_d, 1'b0, op[2], op[1:0], result[4], cout_e);
+  OneBitALU oneBitALU_f(lhs[5], rhs[5], cout_e, 1'b0, op[2], op[1:0], result[5], cout_f);
+  OneBitALU oneBitALU_g(lhs[6], rhs[6], cout_f, 1'b0, op[2], op[1:0], result[6], cout_g);
+  OneBitALU oneBitALU_h(lhs[7], rhs[7], cout_g, 1'b0, op[2], op[1:0], result[7], cout_h);
+  OneBitALU oneBitALU_i(lhs[8], rhs[8], cout_h, 1'b0, op[2], op[1:0], result[8], cout_i);
+  OneBitALU oneBitALU_j(lhs[9], rhs[9], cout_i, 1'b0, op[2], op[1:0], result[9], cout_j);
+  OneBitALU oneBitALU_k(lhs[10], rhs[10], cout_j, 1'b0, op[2], op[1:0], result[10], cout_k);
+  OneBitALU oneBitALU_l(lhs[11], rhs[11], cout_k, 1'b0, op[2], op[1:0], result[11], cout_l);
+  OneBitALU oneBitALU_m(lhs[12], rhs[12], cout_l, 1'b0, op[2], op[1:0], result[12], cout_m);
+  OneBitALU oneBitALU_n(lhs[13], rhs[13], cout_m, 1'b0, op[2], op[1:0], result[13], cout_n);
+  OneBitALU oneBitALU_o(lhs[14], rhs[14], cout_n, 1'b0, op[2], op[1:0], result[14], cout_o);
   
   // Chain 1 OneBitALU_MSB
-  OneBitALU_MSB oneBitALU_MSB(lhs[15], rhs[15], cout_o, 0, op[2], op[1:0], result[15], set, cout_null);
+  OneBitALU_MSB oneBitALU_MSB(lhs[15], rhs[15], cout_o, 1'b0, op[2], op[1:0], result[15], set, cout_null);
 
   // Compute zero
   or(a_or_b, result[0], result[1]);
@@ -259,3 +259,224 @@ module ALU(
   nor(zero, abcd_or_efgh, ijkl_or_mnop);
 
 endmodule // ALU
+
+
+/**
+ * The TwoFourDecoder takes in a binary-encoded number and
+ * ouputs the one-hot decoded value.
+ *
+ * @param {wire [1:0]} encoded - The encoded value
+ * @param {wire [3:0]} decoded - The decoded value
+ */
+module TwoFourDecoder(
+  input wire [1:0] encoded,
+  output wire [3:0] decoded
+);
+
+  // Invert encoded
+  not(encoded_a_, encoded[0]);
+  not(encoded_b_, encoded[1]);
+
+  // Compute products
+  and(decoded[0], encoded_b_, encoded_a_);
+  and(decoded[1], encoded_b_, encoded[0]);
+  and(decoded[2], encoded[1], encoded_a_);
+  and(decoded[3], encoded[1], encoded[0]);
+
+endmodule // TwoFourDecoder
+
+
+/**
+ * The DLatch can store up to one bit of information by
+ * "capturing" (latching) the input on the data wire.
+ *
+ * @param {wire} enable - Enable the latch
+ * @param {wire} data - The bit to store in the latch
+ * @return {wire} Q - The internal state of the latch
+ */
+module DLatch(
+  input wire enable,
+  input wire data,
+  output wire Q
+);
+
+  not(data_, data);
+  nand(x, data, enable);
+  nand(y, data_, enable); 
+  nand(Q, x, Q1);
+  nand(Q1, y, Q); 
+
+endmodule // DLatch
+
+
+/**
+ * The DFlipFlop is a clocked circit that uses a pair of
+ * DLatchs to create a flip-flop that always copies the
+ * data in the input line.
+ *
+ * @param {wire} clk - The input clock to sync with
+ * @param {wire} data - The bit to copy into internal state
+ * @return {wire} Q - The internal state of the flip-flop
+ */
+module DFlipFlop(
+  input wire clk,
+  input wire data,
+  output wire Q
+);
+
+  not(clk_, clk);
+  
+  DLatch d0(clk, data, y);
+  DLatch d1(clk_, y, Q);
+
+endmodule // DFlipFlop
+
+
+/**
+ * Register is a general purpose CPU register with a width
+ * of 16 bits.  Each register is built out of 16 DFipFlops.
+ *
+ * @param {wire} clk - The clock signal to sync to
+ * @param {wire [15:0]} write - The data to write
+ * @return {read [15:0]} read - The state of the register
+ */
+module Register(
+  input wire clk,
+  input wire [15:0] write,
+  output wire [15:0] read
+);
+
+  // Instantiate 16 DFlipFlops
+  DFlipFlop flipFlop_0(clk, write[0], read[0]);
+  DFlipFlop flipFlop_1(clk, write[1], read[1]);
+  DFlipFlop flipFlop_2(clk, write[2], read[2]);
+  DFlipFlop flipFlop_3(clk, write[3], read[3]);
+  DFlipFlop flipFlop_4(clk, write[4], read[4]);
+  DFlipFlop flipFlop_5(clk, write[5], read[5]);
+  DFlipFlop flipFlop_6(clk, write[6], read[6]);
+  DFlipFlop flipFlop_7(clk, write[7], read[7]);
+  DFlipFlop flipFlop_8(clk, write[8], read[8]);
+  DFlipFlop flipFlop_9(clk, write[9], read[9]);
+  DFlipFlop flipFlop_a(clk, write[10], read[10]);
+  DFlipFlop flipFlop_b(clk, write[11], read[11]);
+  DFlipFlop flipFlop_c(clk, write[12], read[12]);
+  DFlipFlop flipFlop_d(clk, write[13], read[13]);
+  DFlipFlop flipFlop_e(clk, write[14], read[14]);
+  DFlipFlop flipFlop_f(clk, write[15], read[15]);
+
+endmodule // Register
+
+
+/**
+ * RegisterFile manages the four registers in 16 bit MIPS.
+ * The register file also manages reads and writes to each
+ * of the registers.
+ *
+ * @param {wire} clk - The clock signal to sync to
+ * @param {wire} write - Enables write mode
+ * @param {wire [1:0]} readDestA - The register to read from
+ * @param {wire [1:0]} readDestB - The register to read from
+ * @param {wire [1:0]} writeDest - The register to write to
+ * @param {wire [15:0]} data - The data to write
+ * @return {wire [15:0]} readA - The data in the first selected register
+ * @return {wire [15:0]} readB - The data in the second selected register
+ */
+module RegisterFile(
+  input wire clk,
+  input wire write,
+  input wire [1:0] readDestA,
+  input wire [1:0] readDestB,
+  input wire [1:0] writeDest,
+  input wire [15:0] data,
+  
+  output wire [15:0] readA,
+  output wire [15:0] readB
+);
+
+  wire [15:0] Q_a;
+  wire [15:0] Q_b;
+  wire [15:0] Q_c;
+
+  // Instantiate registers
+  Register register_a(wa_clk, data, Q_a);
+  Register register_b(wb_clk, data, Q_b);
+  Register register_c(wc_clk, data, Q_c);
+
+  // Handle write inputs
+  TwoFourDecoder writeDecoder(writeDest, {w0, wa, wb, wc});
+
+  and(register_clock, write, clk);
+
+  and(w0_clk, w0, register_clock);
+  and(wa_clk, wa, register_clock);
+  and(wb_clk, wb, register_clock);
+  and(wc_clk, wc, register_clock);
+
+  // Output port a
+  FourOneMux readMuxA_0(readDestA, {1'b0, Q_a[0], Q_b[0], Q_c[0]}, readA[0]);
+  FourOneMux readMuxA_1(readDestA, {1'b0, Q_a[1], Q_b[1], Q_c[1]}, readA[1]);
+  FourOneMux readMuxA_2(readDestA, {1'b0, Q_a[2], Q_b[2], Q_c[2]}, readA[2]);
+  FourOneMux readMuxA_3(readDestA, {1'b0, Q_a[3], Q_b[3], Q_c[3]}, readA[3]);
+  FourOneMux readMuxA_4(readDestA, {1'b0, Q_a[4], Q_b[4], Q_c[4]}, readA[4]);
+  FourOneMux readMuxA_5(readDestA, {1'b0, Q_a[5], Q_b[5], Q_c[5]}, readA[5]);
+  FourOneMux readMuxA_6(readDestA, {1'b0, Q_a[6], Q_b[6], Q_c[6]}, readA[6]);
+  FourOneMux readMuxA_7(readDestA, {1'b0, Q_a[7], Q_b[7], Q_c[7]}, readA[7]);
+  FourOneMux readMuxA_8(readDestA, {1'b0, Q_a[8], Q_b[8], Q_c[8]}, readA[8]);
+  FourOneMux readMuxA_9(readDestA, {1'b0, Q_a[9], Q_b[9], Q_c[9]}, readA[9]);
+  FourOneMux readMuxA_a(readDestA, {1'b0, Q_a[10], Q_b[10], Q_c[10]}, readA[10]);
+  FourOneMux readMuxA_b(readDestA, {1'b0, Q_a[11], Q_b[11], Q_c[11]}, readA[11]);
+  FourOneMux readMuxA_c(readDestA, {1'b0, Q_a[12], Q_b[12], Q_c[12]}, readA[12]);
+  FourOneMux readMuxA_d(readDestA, {1'b0, Q_a[13], Q_b[13], Q_c[13]}, readA[13]);
+  FourOneMux readMuxA_e(readDestA, {1'b0, Q_a[14], Q_b[14], Q_c[14]}, readA[14]);
+  FourOneMux readMuxA_f(readDestA, {1'b0, Q_a[15], Q_b[15], Q_c[15]}, readA[15]);
+
+  // Output port b
+  FourOneMux readMuxB_0(readDestB, {1'b0, Q_a[0], Q_b[0], Q_c[0]}, readB[0]);
+  FourOneMux readMuxB_1(readDestB, {1'b0, Q_a[1], Q_b[1], Q_c[1]}, readB[1]);
+  FourOneMux readMuxB_2(readDestB, {1'b0, Q_a[2], Q_b[2], Q_c[2]}, readB[2]);
+  FourOneMux readMuxB_3(readDestB, {1'b0, Q_a[3], Q_b[3], Q_c[3]}, readB[3]);
+  FourOneMux readMuxB_4(readDestB, {1'b0, Q_a[4], Q_b[4], Q_c[4]}, readB[4]);
+  FourOneMux readMuxB_5(readDestB, {1'b0, Q_a[5], Q_b[5], Q_c[5]}, readB[5]);
+  FourOneMux readMuxB_6(readDestB, {1'b0, Q_a[6], Q_b[6], Q_c[6]}, readB[6]);
+  FourOneMux readMuxB_7(readDestB, {1'b0, Q_a[7], Q_b[7], Q_c[7]}, readB[7]);
+  FourOneMux readMuxB_8(readDestB, {1'b0, Q_a[8], Q_b[8], Q_c[8]}, readB[8]);
+  FourOneMux readMuxB_9(readDestB, {1'b0, Q_a[9], Q_b[9], Q_c[9]}, readB[9]);
+  FourOneMux readMuxB_a(readDestB, {1'b0, Q_a[10], Q_b[10], Q_c[10]}, readB[10]);
+  FourOneMux readMuxB_b(readDestB, {1'b0, Q_a[11], Q_b[11], Q_c[11]}, readB[11]);
+  FourOneMux readMuxB_c(readDestB, {1'b0, Q_a[12], Q_b[12], Q_c[12]}, readB[12]);
+  FourOneMux readMuxB_d(readDestB, {1'b0, Q_a[13], Q_b[13], Q_c[13]}, readB[13]);
+  FourOneMux readMuxB_e(readDestB, {1'b0, Q_a[14], Q_b[14], Q_c[14]}, readB[14]);
+  FourOneMux readMuxB_f(readDestB, {1'b0, Q_a[15], Q_b[15], Q_c[15]}, readB[15]);
+
+endmodule // RegisterFile
+
+
+/**
+ * Memory stores the CPU instructions.  Each memory
+ * address is 16 bits wide.
+ *
+ * @param {wire} clk - The clock signal to sync with
+ * @param {wire [15:0]} pc - The program counter
+ * @return {wire [15:0]} inst - The instration pointed to by pc
+ */
+module Memory(
+  input wire [15:0] pc,
+  output wire [15:0] inst
+);
+
+  reg [15:0] ram [0:65535];
+
+  assign inst = ram[pc];
+
+  initial begin
+    ram[0] = 16'b0100000100010000;
+    ram[1] = 16'b0100001000000111;
+    ram[2] = 16'b0010011011000000;
+    ram[3] = 16'b0001011110000000;
+    ram[4] = 16'b0011101110000000;
+    ram[5] = 16'b0000101111000000;
+    ram[6] = 16'b0111111001000000;
+    ram[7] = 16'b0111101101000000;
+  end
+
+endmodule // Memory
