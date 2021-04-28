@@ -1,5 +1,5 @@
 // @author    Matthew Warren & Christopher Schmitt
-// @version   2.28.2020
+// @version   4.11.2020
 // @licence   MIT (c) @author
 
 
@@ -503,15 +503,29 @@ module IMemory(
   assign value = ram[addr];
 
   initial begin
-    ram[0] = 16'b0101000100000000;  // lw $1, 0x00($0)
-    ram[1] = 16'b0101001000000001;  // lw $2, 0x01($0)
-    ram[2] = 16'b0111011011000000;  // slt $3, $1, $2
-    ram[3] = 16'b1001110000000010;  // bne $3, $0, 0x02
-    ram[4] = 16'b0110000100000001;  // sw $1, 0x01($0)
-    ram[5] = 16'b0110001000000000;  // sw $2, 0x00($0)
-    ram[6] = 16'b0101000100000000;  // lw $1, 0x00($0)
-    ram[7] = 16'b0101001000000001;  // lw $2, 0x01($0)
-    ram[8] = 16'b0001011001000000;  // sub $1, $1, $2
+    ram[0] = 16'b0000000000000000;  // nop
+    ram[1] = 16'b0100000100001111;  // addi $1, $0, 0x0F
+    ram[2] = 16'b0100001000000111;  // addi $2, $0, 0x07
+    ram[3] = 16'b0000000000000000;  // nop
+    ram[4] = 16'b0010011011000000;  // and  $3, $1, $2
+    ram[5] = 16'b0000000000000000;  // nop
+    ram[6] = 16'b0001011110000000;  // sub  $2, $1, $3
+    ram[7] = 16'b0000000000000000;  // nop
+    ram[8] = 16'b0011101110000000;  // or   $2, $2, $3
+    ram[9] = 16'b0000000000000000;  // nop
+    ram[10] = 16'b0000101111000000; // add  $3, $2, $3
+    ram[11] = 16'b0000000000000000; // nop
+    ram[12] = 16'b0111111001000000; // slt  $1, $3, $2
+    ram[13] = 16'b0111101101000000; // slt  $1, $2, $3
+
+    // ram[1] = 16'b0100000100001111;  // addi $1, $0, 0x0F
+    // ram[2] = 16'b0100001000000111;  // addi $2, $0, 0x07
+    // ram[3] = 16'b0010011011000000;  // and  $3, $1, $2
+    // ram[4] = 16'b0001011110000000;  // sub  $2, $1, $3
+    // ram[5] = 16'b0011101110000000;  // or   $2, $2, $3
+    // ram[6] = 16'b0000101111000000;  // add  $3, $2, $3
+    // ram[7] = 16'b0111111001000000;  // slt  $1, $3, $2
+    // ram[8] = 16'b0111101101000000;  // slt  $1, $2, $3
   end
 
 endmodule // IMemory
@@ -548,7 +562,7 @@ endmodule // DMemory
 
 
 /**
- * The MainCOntrol unpacks the opcode and function code
+ * The MainControl unpacks the opcode and function code
  * into instructions for the CPU's internal components.
  */
 module MainControl(
@@ -591,6 +605,7 @@ module ALUControl(
 	    4'b0010: aluCtl <= 3'b000; // and
 	    4'b0011: aluCtl <= 3'b001; // or
 	    4'b0111: aluCtl <= 3'b111; // slt
+      default: aluCtl <= 3'b101; // zero
     endcase
   endcase
 endmodule // ALUControl
@@ -607,64 +622,82 @@ endmodule // ALUControl
 module CPU(
   input wire clk,
   output reg [15:0] pc,
-  output wire [15:0] inst,
-  output wire [15:0] data
+  output reg [15:0] IFID_IR,
+  output reg [15:0] IDEX_IR,
+  output wire [15:0] writeData
 );
 
-  wire [15:0] readB;
-  wire [15:0] readA;
-  wire [15:0] aluResult;
+  // Memories
+  wire [15:0] instruction;
+  wire [15:0] memRead;
+
+  IMemory iMemory(clk, 1'b0, 16'h0000, pc, instruction);
+  DMemory dMemory(clk, 1'b0, 16'h0000, 16'h0000, memRead);
+
+  // Instruction Fetch
   wire [15:0] nextPc;
-  wire [15:0] addr;
-  wire [15:0] increment;
-  wire [15:0] jump;
-  wire [15:0] load;
-  wire [1:0] readDestA;
-  wire [1:0] readDestB;
-  wire [1:0] writeDest;
-  wire [15:0] lhs;
-  wire [15:0] rhs;
+  ALU fetchAlu(pc, 16'h0001, 3'b010, nextPc, fetchZero);
+
+  // Instruction Decode
   wire [1:0] aluOp;
-  wire [2:0] aluCtl;
+  wire [1:0] writeDest;
+  wire [4:0] control;
   wire [15:0] extended;
-  wire [15:0] offset;
+  wire [15:0] readA;
+  wire [15:0] readB;
+  wire [15:0] forwardReadA;
+  wire [15:0] forwardReadB;
 
-  initial pc = 0;
+  reg IDEX_regWrite;
+  reg IDEX_aluSrc;
+  reg IDEX_regDest;
+  reg [1:0] IDEX_aluOp;
+  reg [15:0] IDEX_readA;
+  reg [15:0] IDEX_readB;
+  reg [15:0] IDEX_extended;
+  reg [1:0] IDEX_$rt;
+  reg [1:0] IDEX_$rd;
 
-  assign extended = {{16{inst[7]}}, inst[7:0]};
+  RegisterFile regFile(clk, IDEX_regWrite, IFID_IR[11:10], IFID_IR[9:8], writeDest, writeData, readA, readB);
+  MainControl mainControl(IFID_IR[15:12], {regDest, aluSrc, memToReg, regWrite, memWrite, branch, aluOp});
+  assign extended = {{8{IFID_IR[7]}}, IFID_IR[7:0]};
 
-  not(zero_, zero);
-  not(i12, inst[12]);
+  // Execute
+  wire [15:0] rhs;
+  wire [15:0] aluResult;
+  wire [2:0] aluCtrl;
 
-  and(beq, branch, i12);
-  and(bne, branch, inst[12]);
+  MuxBus rhsMux(IDEX_aluSrc, IDEX_extended, IDEX_readB, rhs);
+  TwoOneMux writeDestA(IDEX_regDest, { IDEX_$rd[0], IDEX_$rt[0] }, writeDest[0]);
+  TwoOneMux writeDestB(IDEX_regDest, { IDEX_$rd[1], IDEX_$rt[1] }, writeDest[1]);
 
-  and(beq_and_zero, beq, zero);
-  and(bne_and_zero_, bne, zero_);
-  
-  or(should_branch, beq_and_zero, bne_and_zero_);
+  ALUControl aluControl(IDEX_aluOp, IDEX_IR[15:12], aluCtrl);
+  ALU mainALU(IDEX_readA, rhs, aluCtrl, writeData, zero);
 
-  TwoOneMux writeDestA(regDest, { inst[6], inst[8] }, writeDest[0]);
-  TwoOneMux writeDestB(regDest, { inst[7], inst[9] }, writeDest[1]);
-
-  MuxBus rhsBus(aluSrc, extended, readB, rhs);
-  MuxBus pcBus(should_branch, jump, increment, nextPc);
-  MuxBus dataBus(memToReg, load, aluResult, data);
-
-  ALU fetchALU(pc, 16'b1, 3'b010, increment, fetchZero);
-  ALU mainALU(readA, rhs, aluCtl, aluResult, zero);
-  ALU branchALU(pc, extended, 3'b010, jump, branchZero);
-  ALU dataALU(readA, extended, 3'b010, addr, dataZero);
-
-  RegisterFile regs(clk, regWrite, inst[11:10], inst[9:8], writeDest, data, readA, readB);
-  MainControl mainControl(inst[15:12], {regDest, aluSrc, memToReg, regWrite, memWrite, branch, aluOp});
-  ALUControl aluControl(aluOp, inst[15:12], aluCtl);
-  IMemory IMemory(clk, 1'b0, 16'b0, pc, inst);
-  DMemory DMemory(clk, memWrite, readB, addr, load);
+  initial begin
+    pc = 0;
+  end
 
   always @(negedge clk) begin
+    // Stage One
     pc <= nextPc;
+    IFID_IR <= instruction;
+
+    // Stage Two
+    IDEX_IR <= IFID_IR;
+    IDEX_regDest <= regDest;
+    IDEX_aluSrc <= aluSrc;
+    IDEX_regWrite <= regWrite;
+    IDEX_aluOp <= aluOp;
+
+    IDEX_readA <= readA;
+    IDEX_readB <= readB;
+
+    IDEX_extended <= extended;
+    IDEX_$rt <= IFID_IR[9:8];
+    IDEX_$rd <= IFID_IR[7:6];
   end
+
 
 endmodule // CPU
 
@@ -678,17 +711,19 @@ module TestBench();
   reg clk;
 
   wire [15:0] pc;
-  wire [15:0] inst;
+  wire [15:0] IFID_IR;
+  wire [15:0] IDEX_IR;
   wire [15:0] data;
+  wire [2:0] aluCtrl;
 
-  CPU cpu(clk, pc, inst, data);
+  CPU cpu(clk, pc, IFID_IR, IDEX_IR, data);
 
   always #1 clk = ~clk;
-  
+
   initial begin
-    $display("clk\tpc\tinstruction\t\tdata");
-    $monitor("%b\t%d\t%b\t%b", clk, pc, inst, data);
+    $display(" PC\tIFID_IR\t\t\tIDEX_IR\t\t\tdata");
+    $monitor("%3d\t%b\t%b\t%3d", pc, IFID_IR, IDEX_IR, data);
     clk = 1;
-    #16 $finish;
+    #29 $finish;
   end
 endmodule

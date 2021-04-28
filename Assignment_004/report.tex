@@ -1,0 +1,226 @@
+%
+% @author   Christopher Schmitt & Matthew Warren
+% @version  3/29/2020
+% @license  MIT
+%
+
+
+\documentclass{article}
+
+
+%
+% Document Imports
+%
+
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[color]{register}
+\usepackage{booktabs}
+
+
+
+%
+% Document Configuration
+%
+
+\newcommand{\hwAuthor}{Christopher K. Schmitt and Matthew Warren}
+\newcommand{\hwSubject}{CS 358}
+\newcommand{\hwSection}{Section 01}
+\newcommand{\hwSemester}{Spring 2020}
+\newcommand{\hwAssignment}{Progress Report 2}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{
+  frame=tb,
+  language=Verilog,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle=\ttfamily,
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+
+%
+% Document Environments
+%
+
+\setlength{\headheight}{65pt}
+\pagestyle{fancy}
+\lhead{\hwAuthor}
+\rhead{
+  \hwSubject \\
+  \hwSection \\
+  \hwSemester \\
+  \hwAssignment
+}
+
+\newenvironment{problem}[1]{
+  \nobreak\section*{#1}
+}{}
+
+
+%
+% Document Start
+%
+
+\begin{document}
+  \begin{problem}{Instruction Set Architecture}
+    \paragraph{}
+    We implement a 3-satge MIPS data-path which implements all R-Type instructions and ADDI.
+
+    \begin{table}[]
+      \begin{tabular}{@{}lllp{6.8cm}@{}}
+        \toprule
+        Instruction & Opcode & Format & Description \\ \midrule
+        add & 0000 & R-Type & Adds \$rs and \$rt together using arithmetic addition, places the sum in \$rt \\
+        sub & 0001 & R-Type & Subtract \$rt from \$rs, places the difference in \$rt \\
+        and & 0010 & R-Type & Perform bitwise ANDing on \$rs and \$rt, place the result in \$rd \\
+        or & 0011 & R-Type & Perform bitwise ORing on \$rs and \$rt, place the result in \$rd \\
+        addi & 0100 & I-Type & Add \$rs to immediate value, place the result in \$rt \\
+        slt & 0111 & R-Type & Put 0x01 in \$rd if \$rs $<$ \$rt, 0x00 otherwise \\ \bottomrule
+      \end{tabular}
+    \end{table}
+    
+    \begin{register}{H}{R-Type}{}
+      \begin{center}
+        \regfield[green!30]{}{4}{12}{{op}}
+        \regfield[red!30]{}{2}{10}{{rs}}
+        \regfield[blue!30]{}{2}{8}{{rt}}
+        \regfield[orange!30]{}{2}{6}{{rd}}
+        \regfield[gray!30]{}{6}{0}{{unused}}
+      \end{center}
+    \end{register}
+
+    \begin{register}{H}{I-Type}{}
+      \begin{center}
+        \regfield[green!30]{}{4}{12}{{op}}
+        \regfield[red!30]{}{2}{10}{{rs}}
+        \regfield[blue!30]{}{2}{8}{{rt}}
+        \regfield[orange!30]{}{8}{0}{{value}}
+      \end{center}
+    \end{register}
+
+    In the above diagrams, \emph{op} is the opcode, \emph{rs} is the
+    source register, \emph{rt} is the target/destination register, and
+    \emph{rd} is the destination register.  Value is the immediate value
+    in I-Type instructions.
+  \end{problem}
+
+  \begin{problem}{Control Table}
+    \begin{table}[]
+      \begin{tabular}{@{}llllllll@{}}
+      Operation & RegDst & ALUSrc & MemToReg & RegWrite & MemWrite & Branch & ALUOp \\ \midrule
+      add & 1 & 0 & 0 & 1 & 0 & 0 & 00 \\
+      sub & 1 & 0 & 0 & 1 & 0 & 0 & 01 \\
+      and & 1 & 0 & 0 & 1 & 0 & 0 & 10 \\
+      or & 1 & 0 & 0 & 1 & 0 & 0 & 10 \\
+      addi & 0 & 1 & 0 & 1 & 0 & 0 & 00 \\
+      lw & 0 & 1 & 1 & 1 & 0 & 0 & 00 \\
+      sw & 0 & 0 & 0 & 0 & 1 & 0 & 00 \\
+      slt & 1 & 0 & 0 & 1 & 0 & 0 & 10 \\
+      beq & 0 & 0 & 0 & 0 & 0 & 1 & 01 \\
+      bne & 0 & 0 & 0 & 0 & 0 & 1 & 01
+      \end{tabular}
+    \end{table}
+  \end{problem}
+
+  \begin{problem}{Source Code}
+    \lstinputlisting[language=Verilog, basicstyle=\scriptsize\ttfamily]{processor.vl}
+  \end{problem}
+
+  \begin{problem}{Machine Translation}
+    \lstinputlisting[basicstyle=\ttfamily]{test.txt}
+  \end{problem}
+
+  \begin{problem}{Output (Branch Taken)}
+    \begin{center}
+      \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+time pc  IF_ID ID_EX EX_MEM MEM_WB writeData
+ 0    0  0000  0000  xxxx   xxxx   xxxx
+ 1    1  5100  0000  0000   xxxx   xxxx
+ 3    2  5201  5100  0000   0000   xxxx
+ 5    3  0000  5201  5100   0000   0000
+ 7    4  0000  0000  5201   5100   0007
+ 9    5  0000  0000  0000   5201   0005
+11    6  76c0  0000  0000   0000   0000
+13    7  0000  76c0  0000   0000   0000
+15    8  0000  0000  76c0   0000   0000
+17    9  0000  0000  0000   76c0   0000
+19   10  8c05  0000  0000   0000   0000
+21   11  0000  8c05  0000   0000   0000
+23   12  0000  0000  8c05   0000   0000
+25   15  0000  0000  0000   8c05   0000
+27   16  0000  0000  0000   0000   0000
+29   17  0000  0000  0000   0000   0000
+31   18  0000  0000  0000   0000   0000
+33   19  5100  0000  0000   0000   0000
+35   20  5201  5100  0000   0000   0000
+37   21  0000  5201  5100   0000   0000
+39   22  0000  0000  5201   5100   0007
+41   23  0000  0000  0000   5201   0005
+43   24  16c0  0000  0000   0000   0000
+45   25  xxxx  16c0  0000   0000   0000
+47   26  xxxx  xxxx  16c0   0000   0000
+49   27  xxxx  xxxx  xxxx   16c0   0002
+51   28  xxxx  xxxx  xxxx   xxxx   xxxx
+53   29  xxxx  xxxx  xxxx   xxxx   xxxx
+55   30  xxxx  xxxx  xxxx   xxxx   xxxx
+      \end{lstlisting}
+    \end{center}
+  \end{problem}
+
+  \begin{problem}{Output (Branch Not Taken)}
+    \begin{center}
+      \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+time pc  IF_ID ID_EX EX_MEM MEM_WB writeData
+0     0  0000  0000  xxxx   xxxx   xxxx
+1     1  5100  0000  0000   xxxx   xxxx
+3     2  5201  5100  0000   0000   xxxx
+5     3  0000  5201  5100   0000   0000
+7     4  0000  0000  5201   5100   0005
+9     5  0000  0000  0000   5201   0007
+11    6  76c0  0000  0000   0000   0000
+13    7  0000  76c0  0000   0000   0000
+15    8  0000  0000  76c0   0000   0000
+17    9  0000  0000  0000   76c0   0001
+19   10  8c05  0000  0000   0000   0000
+21   11  0000  8c05  0000   0000   0000
+23   12  0000  0000  8c05   0000   0000
+25   13  0000  0000  0000   8c05   0001
+27   14  6100  0000  0000   0000   0000
+29   15  6201  6100  0000   0000   0000
+31   16  0000  6201  6100   0000   0000
+33   17  0000  0000  6201   6100   0000
+35   18  0000  0000  0000   6201   0001
+37   19  5100  0000  0000   0000   0000
+39   20  5201  5100  0000   0000   0000
+41   21  0000  5201  5100   0000   0000
+43   22  0000  0000  5201   5100   0005
+45   23  0000  0000  0000   5201   0007
+47   24  16c0  0000  0000   0000   0000
+49   25  xxxx  16c0  0000   0000   0000
+51   26  xxxx  xxxx  16c0   0000   0000
+53   27  xxxx  xxxx  xxxx   16c0   fffe
+55   28  xxxx  xxxx  xxxx   xxxx   xxxx
+      \end{lstlisting}
+    \end{center}
+  \end{problem}
+\end{document}
